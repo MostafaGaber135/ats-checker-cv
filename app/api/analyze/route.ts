@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseDOCX } from '@/lib/parsers/docxParser';
+import { parsePDF } from '@/lib/parsers/pdfParser';
 import { analyzeCV } from '@/lib/analysis/atsAnalyzer';
 
 export const runtime = 'nodejs';
@@ -27,16 +28,9 @@ export async function POST(req: NextRequest) {
     const isDOCX = fileName.endsWith('.docx');
     const isPDF = fileName.endsWith('.pdf');
 
-    if (isPDF) {
+    if (!isDOCX && !isPDF) {
       return NextResponse.json(
-        { error: 'PDF temporarily disabled for debugging. Please upload a DOCX file.' },
-        { status: 415 }
-      );
-    }
-
-    if (!isDOCX) {
-      return NextResponse.json(
-        { error: 'Unsupported file type. Please upload a DOCX file.' },
+        { error: 'Unsupported file type. Please upload a DOCX or PDF file.' },
         { status: 415 }
       );
     }
@@ -44,7 +38,9 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const parsed = await parseDOCX(buffer, file.name);
+    const parsed = isPDF
+      ? await parsePDF(buffer, file.name)
+      : await parseDOCX(buffer, file.name);
 
     const result = await analyzeCV({
       cvText: parsed.text,
