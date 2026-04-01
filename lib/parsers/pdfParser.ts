@@ -3,26 +3,18 @@
 // Uses pdf-parse to extract raw text from PDF buffers
 // ============================================================
 
-// ── الكود القديم (pdf-parse v1) — تم تعليقه لأن v2 غيّر الـ API
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-// const pdfParse = require('pdf-parse') as (buffer: Buffer, options?: object) => Promise<{ text: string; numpages: number }>;
-
-// ── الكود الجديد: pdf-parse v2 يستخدم كلاس PDFParse بدلًا من دالة مباشرة
-import { PDFParse } from 'pdf-parse';
+import pdfParse from 'pdf-parse';
 import { ParsedFile } from '@/lib/types';
 
 export async function parsePDF(buffer: Buffer, fileName: string): Promise<ParsedFile> {
   try {
-    // pdf-parse v2: ننشئ instance بـ Uint8Array (Buffer متوافق)، ثم نستدعي getText()
-    const parser = new PDFParse({ data: new Uint8Array(buffer) });
-    const data = await parser.getText({ pageJoiner: '\n' });
+    const data = await pdfParse(buffer);
 
-    // Clean up extracted text: normalize whitespace, remove control characters
     const cleaned = data.text
       .replace(/\r\n/g, '\n')
       .replace(/\r/g, '\n')
-      .replace(/[^\S\n]+/g, ' ')   // collapse horizontal whitespace
-      .replace(/\n{3,}/g, '\n\n')   // max 2 consecutive newlines
+      .replace(/[^\S\n]+/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
       .trim();
 
     if (!cleaned || cleaned.length < 50) {
@@ -31,8 +23,7 @@ export async function parsePDF(buffer: Buffer, fileName: string): Promise<Parsed
 
     return {
       text: cleaned,
-      // pageCount: data.numpages, // pdf-parse v1 كانت تُعيد numpages
-      pageCount: data.pages.length, // pdf-parse v2 تُعيد مصفوفة pages
+      pageCount: data.numpages,
       fileName,
     };
   } catch (err: unknown) {
